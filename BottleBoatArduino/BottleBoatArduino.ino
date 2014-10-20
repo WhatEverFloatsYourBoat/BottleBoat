@@ -31,7 +31,7 @@ void init_compass()
 	delay(50);
 
 	// change the compass to continuous 
-	//i2c_write(HMC5883_ADDRESS, HMC5883_REG_WRITE_MODE, 0x00); //TODO : Bug in this line
+	Wire.write(HMC5883_ADDRESS, HMC5883_REG_WRITE_MODE, 0x00); //TODO : Bug in this line
 	Serial.println("HMC5883 set to continous mode");
 	delay(50);
 }
