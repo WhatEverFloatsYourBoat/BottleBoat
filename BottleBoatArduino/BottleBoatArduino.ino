@@ -1,6 +1,6 @@
 #include <Wire.h>
 #include "TinyGPS.h"
-TinyGPS gps;
+TinyGPS gps; // See http://arduiniana.org/libraries/tinygps/
 
 void setup()
 {
