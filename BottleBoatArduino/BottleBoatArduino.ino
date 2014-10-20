@@ -1,16 +1,86 @@
 #include <Wire.h>
-#include "TinyGPS.h"
-TinyGPS gps; // See http://arduiniana.org/libraries/tinygps/
+#include <Servo.h>
+#include "TinyGPS.h" // Downloaded from : https://github.com/mikalhart/TinyGPS/releases/tag/v13
 
+Servo servo;
+TinyGPS gps; // We are using a EM-408 GPS.  Also see http://arduiniana.org/libraries/tinygps/
+
+//list of arduino pins the devices are conected to. 
+int const motorPin = 9;
+int const servoPin = 10;
+
+long wayPoints[][2] = { {1,2}, {3,4} }; //{ {latitude, longitude}, .... } the points we want the boat to sail too.
+
+
+/**
+ *
+**/
 void setup()
 {
+ //setup servo/rudder 
+ servo.attach(servoPin);
+ 
+ //setup motor 
+ pinMode(motorPin, OUTPUT);
+ digitalWrite(motorPin, LOW);
+ 
+ //setup compass
+ init_compass();
+ 
+ //setup GPS
  //TODO 
 }
 
+
+/**
+ * @Description: The main part of the program
+**/
 void loop()
 {
  //TODO 
 }
+
+
+/**
+ * @Description: Anything to do with controlling the servo.
+ * @param angle int[in] the angle the rudder should be set to
+**/
+void setDirection(int angle)
+{
+  int actualAngle = map(angle, 0, 1023, 0, 179); //see : http://arduino.cc/en/reference/map 
+  servo.write(actualAngle); 
+}
+
+/**
+ * @Description: Anything to do with controlling the motor
+ *
+**/
+void setMotorSpeed(int motorSpeed)
+{
+  analogWrite(motorPin, motorSpeed);
+}
+
+
+
+//--------------------------------------------------//
+//  The GPS code                                    //
+//--------------------------------------------------//
+
+/**
+ *
+ * @returns : array containing the latitude and longitude. //TODO : check it is avaliable ect. see http://arduiniana.org/libraries/tinygps/
+**/
+long* getPosition()
+{
+  long lat, lon;
+  unsigned long fixAge;
+  gps.get_position(&lat, &lon, &fixAge);
+  
+  long wayPoint[2] = {lat, lon};
+  return wayPoint;
+}
+
+
 
 
 //--------------------------------------------------//
@@ -31,7 +101,12 @@ void init_compass()
 	delay(50);
 
 	// change the compass to continuous 
-	Wire.write(HMC5883_ADDRESS, HMC5883_REG_WRITE_MODE, 0x00); //TODO : Bug in this line
+        //Put the HMC5883 IC into the correct operating mode
+        Wire.beginTransmission(HMC5883_ADDRESS); //open communication with HMC5883
+        Wire.write(HMC5883_REG_DATA); //select mode register
+        Wire.write(HMC5883_REG_WRITE_MODE); //continuous measurement mode
+        Wire.endTransmission();
+	//Wire.write(HMC5883_ADDRESS, HMC5883_REG_WRITE_MODE, 0x00); 
 	Serial.println("HMC5883 set to continous mode");
 	delay(50);
 }
