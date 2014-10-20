@@ -76,8 +76,8 @@ long* getPosition()
   unsigned long fixAge;
   gps.get_position(&lat, &lon, &fixAge);
   
-  long wayPoint[2] = {lat, lon};
-  return wayPoint;
+  long currentPosition[2] = {lat, lon};
+  return currentPosition;
 }
 
 
