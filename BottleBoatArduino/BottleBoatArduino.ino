@@ -67,8 +67,8 @@ void setMotorSpeed(int motorSpeed)
 //--------------------------------------------------//
 
 /**
- *
- * @returns : array containing the latitude and longitude. //TODO : check it is avaliable ect. see http://arduiniana.org/libraries/tinygps/
+ * //TODO : setup and check it is avaliable ect. see http://arduiniana.org/libraries/tinygps/
+ * @returns : array containing the latitude and longitude. 
 **/
 long* getPosition()
 {
