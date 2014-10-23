@@ -70,8 +70,8 @@ void loop()
     double courseTo = gps.courseTo(gps.location.lat(),gps.location.lng(), waypointLat, waypointLng);    
     int currentHeading = get_heading();
     
-    // set the angle of the servo
-    while ( checkHeading(courseTo, currentHeading) )//courseTo != currentHeading ) // will include errors in a sec
+    // set the angle of the servo, if we are heading in the wrong direction
+    while ( checkHeading(courseTo, currentHeading) )
     {      
       //commented out test code
      // double currentHeading = 0;
