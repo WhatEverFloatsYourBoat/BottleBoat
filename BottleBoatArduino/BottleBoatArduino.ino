@@ -82,11 +82,11 @@ void loop()
       angle += 5; // just to make sure you are actually going to be turning. 
       if ((angleDiff < 0) && (angleDiff > -180))//turn anticlockwise
       {        
-        angle = NO_ANGLE + angle
+        angle = NO_ANGLE + angle;
       }
-      else //turn clockwise
+      else //angleDiff > 0 and angleDiff < 180 //turn clockwise
       {
-        angle = NO_ANGLE - angle 
+        angle = NO_ANGLE - angle; 
       }     
       setDirection(angle);
    
@@ -99,13 +99,13 @@ void loop()
       delay(100);
     }   
     
-    
+    setDirection(NO_ANGLE);
     // when we get to within 4meters of the waypoint, slow down a little.
     if (distanceKm < 0.004)
     {
       setMotorSpeed(100); 
     }
-    else
+    else // go fast :D
     {
       setMotorSpeed(270); 
     }      
