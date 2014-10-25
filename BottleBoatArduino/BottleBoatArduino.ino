@@ -1,23 +1,30 @@
-#include <SoftwareSerial.h>
+//#include <SoftwareSerial.h>
 #include <TinyGPS++.h>
 #include <Wire.h>
 #include <Servo.h>
-#include "TinyGPS.h" // Downloaded from : https://github.com/mikalhart/TinyGPS/releases/tag/v13
+//#include "TinyGPS.h" // Downloaded from : https://github.com/mikalhart/TinyGPS/releases/tag/v13
+#include "softare_uart.c"
 
-Servo servo;
 TinyGPSPlus gps; // We are using a EM-408 GPS.  Also see http://arduiniana.org/libraries/tinygps/
-
-SoftwareSerial ss(4,3); // For the GPS. 4,3 are the pins that the GPS are attached too.
-
+//TinyGPS gps;
+//SoftwareSerial ss(11,12); // For the GPS. 4,3 are the pins that the GPS are attached too.
+Servo servo;
 //list of arduino pins the devices are conected to. 
-int const motorPin = 9;
-int const servoPin = 10;
+int const motorPin = 6;
+int const servoPin = 5;
+int const gpsPin = 11;
+int const gpsBaud = 4800;
 
-int const MAX_ANGLE = 270;
-int const MIN_ANGLE = 100;
-int const NO_ANGLE = 180;
+//int const MAX_ANGLE = 270;
+//int const MIN_ANGLE = 100;
+//int const NO_ANGLE = 180;
+int const MAX_ANGLE = 180;
+int const MIN_ANGLE = 0;
+int const NO_ANGLE = 90;
 
-double waypoints[][2] = { {1,2}, {3,4} }; //{ {latitude, longitude}, .... } the points we want the boat to sail too.
+int fakeAngle = 0;
+
+double waypoints[][2] = { {52.5,-4.1}, {51.5,-4.1} }; //{ {latitude, longitude}, .... } the points we want the boat to sail too.
 int currentWaypointIndex = 0;
 
 /**
@@ -25,20 +32,23 @@ int currentWaypointIndex = 0;
 **/
 void setup()
 {
-  Serial.begin(9600);
-  
- //setup servo/rudder 
- servo.attach(servoPin);
+  Serial.begin(115200);
+  //ss.begin(4800);
+ //setup servo/rudder
+ pinMode(servoPin, OUTPUT);
+ digitalWrite(servoPin, LOW);
+ pinMode(gpsPin, INPUT);
+ servo.attach(servoPin, 1060, 1920);
+ //servo.writeMicroseconds(1500);
+ //servo.write(50);
+ setDirection(NO_ANGLE);
  
  //setup motor 
- pinMode(motorPin, OUTPUT);
- digitalWrite(motorPin, LOW);
+ //pinMode(motorPin, OUTPUT);
+ //digitalWrite(motorPin, LOW);
  
  //setup compass
  init_compass();
- 
- //setup GPS
- //TODO 
 }
 
 
@@ -47,68 +57,170 @@ void setup()
 **/
 void loop()
 {
-  //Serial.println(get_heading()); 
+  fakeAngle = (fakeAngle + 1) % 360;
+  //return;
+  //Serial.println("loop"); 
+ /* while (true){
+    if(ss.available() > 0)
+    {
+      //Serial.print();
+    Serial.write(ss.read());
+    }
+  }*/
   
-  if(ss.available() > 0)
+  //char gps_char;
+  //gps_char = uart_rx(gpsPin, gpsBaud);
+  //boolean gps_ready = false;
+  char gps_string[255];
+  int i=0;
+  gps_string[0]=0;
+  char gps_char;
+  boolean started=false;
+  while(i<254) {
+    gps_char = uart_rx(gpsPin,gpsBaud);
+    if(gps_char=='$')
+    {
+      started=true;
+    }
+    if(started)
+    {
+      gps_string[i] = gps_char;
+      i++;
+      if(gps_char=='\r')
+      {
+        break;
+      }
+    }
+  }
+  gps_string[i] = 0;
+  if(gps_string[1]=='G'&&gps_string[2]=='P'&&gps_string[3]=='R'&&gps_string[4]=='M'&&gps_string[5]=='C')
   {
-    gps.encode(ss.read()); // at the start of each loop we want to get what the GPS coordinates 
+    for(i=0;i<strlen(gps_string);i++)
+    {
+      gps.encode(gps_string[i]);
+    }
+  }
+  
+ 
+  //Serial.println();
+
+  //while (!gps.encode(uart_rx(gpsPin, gpsBaud)));
+  
+  //gps.encode(ss.read()); 
+  
+ // if(ss.available() > 0)
+ // {
+    //if (gps.location.isUpdated())//gps.encode(ss.read()))// 
+    if(gps.location.isUpdated())
+    {
+    //Serial.println("ss avaliable");
+    //setDirection(angle);
+    
+     // at the start of each loop we want to get what the GPS coordinates 
     
     double waypointLat = waypoints[currentWaypointIndex][0];
     double waypointLng = waypoints[currentWaypointIndex][1];
-    
+    float currentLat, currentLng;
+    unsigned long fix_age;
+    //gps.f_get_position(&currentLat, &currentLng, &fix_age);
     // check if we have already reached the waypoint
-    double distanceKm = gps.distanceBetween(gps.location.lat(), gps.location.lng(), waypointLat, waypointLng) / 1000.0;    
+    Serial.print("gps.location.lat() = ");
+    Serial.println(gps.location.lat());//currentLat);//location.lat());
+    Serial.print("gps.location.lng() = ");
+    Serial.println(gps.location.lng());//currentLng);//gps.location.lng());
+    
+    double distanceKm = gps.distanceBetween(gps.location.lat(), gps.location.lng(), waypointLat, waypointLng) / 1000.0; //distance_between(currentLat, currentLng, waypointLat, waypointLng) / 1000.0;  //(gps.location.lat(), gps.location.lng(), waypointLat, waypointLng) / 1000.0;    
+    Serial.print("distanceKm = ");
+    Serial.println(distanceKm);
+    
     if (distanceKm < 0.014)// we will try to get within 14meters of the target.
     {
+      Serial.print("Reached : ");
+      Serial.print(waypoints[currentWaypointIndex][0]);
+      Serial.print(", ");
+      Serial.println(waypoints[currentWaypointIndex][1]);
+      
       currentWaypointIndex++;   
       // will error once we have finished ;)
       waypointLat = waypoints[currentWaypointIndex][0];
-      waypointLng = waypoints[currentWaypointIndex][1];     
+      waypointLng = waypoints[currentWaypointIndex][1];    
+     
+      Serial.print("Go to : ");
+      Serial.print(waypoints[currentWaypointIndex][0]);
+      Serial.print(", ");
+      Serial.println(waypoints[currentWaypointIndex][1]); 
     }
      
     
-    double courseTo = gps.courseTo(gps.location.lat(),gps.location.lng(), waypointLat, waypointLng);    
+    double courseTo = gps.courseTo(gps.location.lat(),gps.location.lng(), waypointLat, waypointLng);  //course_to(currentLat, currentLng, waypointLat, waypointLng);//(gps.location.lat(),gps.location.lng(), waypointLat, waypointLng);  
+    Serial.print("courseTo = ");
+    Serial.println(courseTo);  
     int currentHeading = get_heading();
-    
+    Serial.print("currentHeading = ");
+    Serial.println(currentHeading); 
     // set the angle of the servo, if we are heading in the wrong direction
-    while ( checkHeading(courseTo, currentHeading) )
-    {      
-      //commented out test code
-     // double currentHeading = 0;
-     // double courseTo = 180;
+    if ( checkHeading(courseTo, currentHeading) )
+    {         
+      //int angleDiff = courseTo - currentHeading;
+      //int angleMin = (angleDiff + 180) % 360 - 180;
+      //Serial.print("angleDiff is : ");
+      //Serial.println(angleDiff);
+      //Serial.print("angleMin : ");
+      //Serial.println(angleMin);
+      //Serial.println((angleDiff + 180) % 360 - 180);
+      //int angle = (sq((angleDiff + 180) % 360 - 180))/1620; // sq(180)/80 = 405 : We will want to turn a max of 180degrees, and we never want servo/rudder to go above 80 (don't wnat your rudder back-to-front or flat against boat). 
+      //angle += 5; // just to make sure you are actually going to be turning. 
+      //int angle = angleMin + 5;
+      //int angle = angleMin;
+      //Serial.print("pre-angle is : ");
+      //Serial.println(angle);
+      //if ((angleDiff < 0) && (angleDiff > -180))//turn anticlockwise
+      //{        
+        //Serial.print("turn anticlockwise");
+        //angle = NO_ANGLE + angle;
+      //}
+      //else //angleDiff > 0 and angleDiff < 180 //turn clockwise
+      //{
+        //Serial.print("turn clockwise");
+        //angle = NO_ANGLE - angle; 
         
-      double angleDiff = courseTo - currentHeading;
-      int angle = sq(angleDiff)/405; // 405 becuase we never want it to go above 80 (don't wnat your rudder back-to-front or flat against boat)
-      angle += 5; // just to make sure you are actually going to be turning. 
-      if ((angleDiff < 0) && (angleDiff > -180))//turn anticlockwise
-      {        
-        angle = NO_ANGLE + angle;
-      }
-      else //angleDiff > 0 and angleDiff < 180 //turn clockwise
-      {
-        angle = NO_ANGLE - angle; 
-      }     
+        int relativeHeading = (courseTo - fakeAngle);
+        int relativeHeadingClamped = relativeHeading;
+        if(relativeHeadingClamped < -90) {
+          relativeHeadingClamped = -90;
+        }
+        if(relativeHeadingClamped > 90) {
+          relativeHeadingClamped = 90;
+        }
+        int angle = relativeHeading + 90;
+      //}     
       setDirection(angle);
-   
-        
-      setMotorSpeed(100); 
-      
-      courseTo = gps.courseTo(gps.location.lat(),gps.location.lng(), waypointLat, waypointLng);    
-      currentHeading = get_heading();
-      
-      delay(100);
+      Serial.print("fakeAngle = ");
+      Serial.println(fakeAngle);
+      Serial.print("relativeHeading = ");
+      Serial.println(relativeHeading);
+      Serial.print("relativeHeadingClamped = ");
+      Serial.println(relativeHeadingClamped);
+      Serial.print("Servo angle is : ");
+      Serial.println(angle);
+          
+      setMotorSpeed(100); //slowish speed wanted while turning  
     }   
-    
-    setDirection(NO_ANGLE);
-    // when we get to within 4meters of the waypoint, slow down a little.
-    if (distanceKm < 0.004)
+    else
     {
-      setMotorSpeed(100); 
-    }
-    else // go fast :D
-    {
-      setMotorSpeed(270); 
-    }      
+      Serial.print("Go straight :) ");    
+      //setDirection(NO_ANGLE); // we don't want to be turning
+      // when we get to within 4meters of the waypoint, slow down a little.
+      
+      if (distanceKm < 0.004)
+      {
+        setMotorSpeed(100); 
+      }
+      else // go fast :D
+      {
+        setMotorSpeed(270); 
+      }  
+    }   
     
   }
 }
@@ -118,7 +230,12 @@ void loop()
 **/
 boolean checkHeading(double courseTo, int currentHeading)
 {
-  return (abs(courseTo - currentHeading) < 5);  
+  int angle = courseTo - currentHeading;
+  //angle = (angle + 180) % 360 - 180;
+ 
+  //return angle;
+  
+  return true;//((abs((angle + 180) % 360 - 180)) > 5);  
 }
 
 
@@ -129,6 +246,8 @@ boolean checkHeading(double courseTo, int currentHeading)
 void setDirection(int angle)//double courseTo, int currentHeading, double distanceKm)
 {
   int actualAngle = map(angle, 0, 1023, 0, 179); //see : http://arduino.cc/en/reference/map 
+  Serial.print("actualAngle = ");
+  Serial.println(actualAngle);
   servo.write(actualAngle); 
 }
 
