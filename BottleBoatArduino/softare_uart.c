@@ -1,7 +1,7 @@
 #include "Arduino.h"
 
 // bits per second, measured in microseconds.
-#define HALF_BIT_4800 104;
+#define HALF_BIT_4800 52;
 #define FULL_BIT_4800 208;
 
 

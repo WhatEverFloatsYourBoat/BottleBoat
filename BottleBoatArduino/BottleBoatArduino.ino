@@ -22,9 +22,9 @@ int const MAX_ANGLE = 180;
 int const MIN_ANGLE = 0;
 int const NO_ANGLE = 90;
 
-int fakeAngle = 0;
+//int fakeAngle = 0;
 
-double waypoints[][2] = { {52.5,-4.1}, {51.5,-4.1} }; //{ {latitude, longitude}, .... } the points we want the boat to sail too.
+double waypoints[][2] = { {52.0,-4.1}, {51.5,-4.1} }; //{ {latitude, longitude}, .... } the points we want the boat to sail too.
 int currentWaypointIndex = 0;
 
 /**
@@ -35,14 +35,17 @@ void setup()
   Serial.begin(115200);
   //ss.begin(4800);
  //setup servo/rudder
- pinMode(servoPin, OUTPUT);
- digitalWrite(servoPin, LOW);
- pinMode(gpsPin, INPUT);
- servo.attach(servoPin, 1060, 1920);
+  pinMode(servoPin, OUTPUT);
+  servo.attach(servoPin, 620, 2400);//, 1060, 1920);
+  digitalWrite(servoPin, LOW);  
+  setDirection(NO_ANGLE);
+ 
  //servo.writeMicroseconds(1500);
  //servo.write(50);
  setDirection(NO_ANGLE);
  
+ 
+ pinMode(gpsPin, INPUT);
  //setup motor 
  //pinMode(motorPin, OUTPUT);
  //digitalWrite(motorPin, LOW);
@@ -57,7 +60,11 @@ void setup()
 **/
 void loop()
 {
-  fakeAngle = (fakeAngle + 1) % 360;
+  //Serial.println(get_heading());
+  //return;
+  
+  
+  //fakeAngle = (fakeAngle + 1) % 360;
   //return;
   //Serial.println("loop"); 
  /* while (true){
@@ -93,14 +100,41 @@ void loop()
     }
   }
   gps_string[i] = 0;
+  Serial.print("pre gps_string = ");
+    Serial.println(gps_string);
   if(gps_string[1]=='G'&&gps_string[2]=='P'&&gps_string[3]=='R'&&gps_string[4]=='M'&&gps_string[5]=='C')
   {
     for(i=0;i<strlen(gps_string);i++)
     {
       gps.encode(gps_string[i]);
     }
+    Serial.print("gps_string = ");
+    Serial.println(gps_string);
   }
   
+ /* unsigned long start = millis();
+  while(millis() < start +2000)
+  {
+   if (char c = uart_rx(11,4800))
+  {
+   gps.encode(c);
+   Serial.print(c);
+   if(c == '/n')
+   {
+    break; 
+   }
+  } 
+    
+  }*/
+  
+  float currentLat = 52.07;//gps.location.lat();
+  float currentLng = -4.02;//gps.location.lng();
+  
+  Serial.print("gps.location.lat() = ");
+    Serial.println(currentLat);//currentLat);//location.lat());
+    Serial.print("gps.location.lng() = ");
+    Serial.println(currentLng);//currentLng);//gps.location.lng());
+   // return;*/
  
   //Serial.println();
 
@@ -111,8 +145,8 @@ void loop()
  // if(ss.available() > 0)
  // {
     //if (gps.location.isUpdated())//gps.encode(ss.read()))// 
-    if(gps.location.isUpdated())
-    {
+    //if(gps.location.isUpdated())
+    //{
     //Serial.println("ss avaliable");
     //setDirection(angle);
     
@@ -120,16 +154,16 @@ void loop()
     
     double waypointLat = waypoints[currentWaypointIndex][0];
     double waypointLng = waypoints[currentWaypointIndex][1];
-    float currentLat, currentLng;
+    //float currentLat, currentLng;
     unsigned long fix_age;
     //gps.f_get_position(&currentLat, &currentLng, &fix_age);
     // check if we have already reached the waypoint
     Serial.print("gps.location.lat() = ");
-    Serial.println(gps.location.lat());//currentLat);//location.lat());
+    Serial.println(currentLat);//currentLat);//location.lat());
     Serial.print("gps.location.lng() = ");
-    Serial.println(gps.location.lng());//currentLng);//gps.location.lng());
+    Serial.println(currentLng);//currentLng);//gps.location.lng());
     
-    double distanceKm = gps.distanceBetween(gps.location.lat(), gps.location.lng(), waypointLat, waypointLng) / 1000.0; //distance_between(currentLat, currentLng, waypointLat, waypointLng) / 1000.0;  //(gps.location.lat(), gps.location.lng(), waypointLat, waypointLng) / 1000.0;    
+    double distanceKm = gps.distanceBetween(currentLat, currentLng, waypointLat, waypointLng) / 1000.0; //distance_between(currentLat, currentLng, waypointLat, waypointLng) / 1000.0;  //(gps.location.lat(), gps.location.lng(), waypointLat, waypointLng) / 1000.0;    
     Serial.print("distanceKm = ");
     Serial.println(distanceKm);
     
@@ -152,15 +186,15 @@ void loop()
     }
      
     
-    double courseTo = gps.courseTo(gps.location.lat(),gps.location.lng(), waypointLat, waypointLng);  //course_to(currentLat, currentLng, waypointLat, waypointLng);//(gps.location.lat(),gps.location.lng(), waypointLat, waypointLng);  
+    double courseTo = gps.courseTo(currentLat,currentLng, waypointLat, waypointLng);  //course_to(currentLat, currentLng, waypointLat, waypointLng);//(gps.location.lat(),gps.location.lng(), waypointLat, waypointLng);  
     Serial.print("courseTo = ");
     Serial.println(courseTo);  
     int currentHeading = get_heading();
     Serial.print("currentHeading = ");
     Serial.println(currentHeading); 
     // set the angle of the servo, if we are heading in the wrong direction
-    if ( checkHeading(courseTo, currentHeading) )
-    {         
+   // if ( checkHeading(courseTo, currentHeading) )
+    //{         
       //int angleDiff = courseTo - currentHeading;
       //int angleMin = (angleDiff + 180) % 360 - 180;
       //Serial.print("angleDiff is : ");
@@ -184,51 +218,44 @@ void loop()
         //Serial.print("turn clockwise");
         //angle = NO_ANGLE - angle; 
         
-        int relativeHeading = (courseTo - fakeAngle);
-        int relativeHeadingClamped = relativeHeading;
-        if(relativeHeadingClamped < -90) {
-          relativeHeadingClamped = -90;
-        }
-        if(relativeHeadingClamped > 90) {
-          relativeHeadingClamped = 90;
-        }
-        int angle = relativeHeading + 90;
+      double relativeHeading = (courseTo - currentHeading);//fakeAngle);
+      double relativeHeadingClamped = relativeHeading;
+      if(relativeHeadingClamped < -90) {
+        relativeHeadingClamped = -90;
+      }
+      if(relativeHeadingClamped > 90) {
+        relativeHeadingClamped = 90;
+      }
+      double angle = NO_ANGLE + relativeHeadingClamped;//relativeHeading + 90;
       //}     
       setDirection(angle);
-      Serial.print("fakeAngle = ");
-      Serial.println(fakeAngle);
       Serial.print("relativeHeading = ");
       Serial.println(relativeHeading);
       Serial.print("relativeHeadingClamped = ");
       Serial.println(relativeHeadingClamped);
       Serial.print("Servo angle is : ");
       Serial.println(angle);
-          
-      setMotorSpeed(100); //slowish speed wanted while turning  
-    }   
+              
+      //setMotorSpeed(100); //slowish speed wanted while turning  
+   // }   
+    if ((angle > 10) || (distanceKm < 0.004)) 
+    {
+      setMotorSpeed(100); 
+    }
     else
     {
-      Serial.print("Go straight :) ");    
-      //setDirection(NO_ANGLE); // we don't want to be turning
-      // when we get to within 4meters of the waypoint, slow down a little.
       
-      if (distanceKm < 0.004)
-      {
-        setMotorSpeed(100); 
-      }
-      else // go fast :D
-      {
         setMotorSpeed(270); 
-      }  
+      
     }   
     
-  }
+  //}
 }
 
 /**
 *
 **/
-boolean checkHeading(double courseTo, int currentHeading)
+/*boolean checkHeading(double courseTo, int currentHeading)
 {
   int angle = courseTo - currentHeading;
   //angle = (angle + 180) % 360 - 180;
@@ -236,19 +263,19 @@ boolean checkHeading(double courseTo, int currentHeading)
   //return angle;
   
   return true;//((abs((angle + 180) % 360 - 180)) > 5);  
-}
+}*/
+
 
 
 /**
  * @Description: Anything to do with controlling the servo.
  * @param angle int[in] the angle the rudder should be set to
 **/
-void setDirection(int angle)//double courseTo, int currentHeading, double distanceKm)
+void setDirection(double angle)//double courseTo, int currentHeading, double distanceKm)
 {
-  int actualAngle = map(angle, 0, 1023, 0, 179); //see : http://arduino.cc/en/reference/map 
-  Serial.print("actualAngle = ");
-  Serial.println(actualAngle);
-  servo.write(actualAngle); 
+  int angleMicroSec = angle * 10 + 600; // angle should be between 0 and 180
+  servo.writeMicroseconds(angleMicroSec); // 600 to 2400  
+  servo.write(angle); 
 }
 
 /**
@@ -296,7 +323,7 @@ void init_compass()
 int get_heading()
 {
         //Serial.println("get_heading");
-	byte x, y, z;
+	int x, y, z;
 	double heading;
 
 	// set the register on the device we want to read.
@@ -321,8 +348,16 @@ int get_heading()
 	// get a heading in radians
 	heading = atan2(x, y);
 
+
+      
+
 	// return the heading in degrees, 57.29582 = 180 / PI
-	return heading * 57.29582;
+        heading = heading * 57.29582;
+        if (heading < 0)
+        {
+          heading+= 360;
+        }
+	return heading;
 }
 
 
