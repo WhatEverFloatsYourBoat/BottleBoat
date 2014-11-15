@@ -153,7 +153,8 @@ void setDirection(double angle)//double courseTo, int currentHeading, double dis
 **/
 void setMotorSpeed(int motorSpeed)
 {
-  analogWrite(motorPin, motorSpeed);
+  digitalWrite(motorPin, HIGH);
+ // analogWrite(motorPin, motorSpeed);
 }
 
 
